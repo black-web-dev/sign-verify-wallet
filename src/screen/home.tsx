@@ -10,21 +10,25 @@ import { getCsrfToken, signIn } from "next-auth/react";
 import { useRouter } from "next/router";
 import LoadingIndicator from "@/components/loadingIndicator";
 import Avatar from "@/components/identicon";
+import { useCheckStatus } from "@/hooks/useCheckStatus";
 
 const Home = () => {
   const router = useRouter();
 
   const [mounted, setMounted] = useState<boolean>(false);
   const [requestNo, setRequestNo] = useState<string>("");
-  const [status, setStatus] = useState<number>(-1);
-  const [message, setMessage] = useState<string>("");
-  const [isChecking, setIsChecking] = useState<boolean>(false);
 
   const { address, isConnected } = useAccount();
   const { connectors, connect, isLoading, pendingConnector } = useConnect();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
   const [hasSigned, setHasSigned] = useState(false);
+
+  const { isChecking, message, status } = useCheckStatus(
+    requestNo,
+    address,
+    isConnected
+  );
 
   const handleSign = useCallback(async () => {
     if (!isConnected) await connect();
@@ -60,51 +64,17 @@ const Home = () => {
     }
   }, [address, connect, isConnected, signMessageAsync, requestNo]);
 
-  const checkStatus = useCallback(
-    (
-      requestNo: string,
-      address: `0x${string}` | undefined,
-      isConnected: boolean
-    ) => {
-      if (requestNo && address && isConnected) {
-        setIsChecking(true);
-
-        fetch(`/api/checkStatus?requestNo=${requestNo}&address=${address}`)
-          .then((response) => response.json())
-          .then(({ status, message }) => {
-            setStatus(status);
-            setMessage(message);
-          })
-          .finally(() => {
-            setIsChecking(false);
-          });
-      }
-    },
-    []
-  );
-
   useEffect(() => {
     const requestNo = (router.query.slug && router.query.slug[0]) || "";
-
     setRequestNo(requestNo);
   }, [router]);
-
-  useEffect(() => {
-    checkStatus(requestNo, address, isConnected);
-
-    const timeoutId = setInterval(() => {
-      checkStatus(requestNo, address, isConnected);
-    }, 10 * 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [requestNo, address, isConnected, checkStatus]);
 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return <>Loading</>;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center">
+    <main className="flex flex-auto flex-col items-center justify-center">
       {!requestNo && (
         <div className="flex flex-col gap-2">
           <div className="text-xl">Invalid Request Number</div>
@@ -116,12 +86,13 @@ const Home = () => {
       )}
       {requestNo && !isConnected && (
         <>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 items-start">
+            <div className="text-xl font-bold pb-2">Select a wallet</div>
             {connectors.map((connector: any) => (
               <button
                 disabled={!connector.ready}
                 key={connector.id}
-                className="py-2 px-4 bg-blue-900 border border-transparent hover:border hover:border-blue-900 hover:bg-transparent"
+                className="py-3 px-5 bg-blue-900 border border-transparent hover:border hover:border-blue-900 hover:bg-transparent"
                 onClick={() => connect({ connector })}
               >
                 <div className="flex items-center gap-2 min-w-[200px] justify-between">
@@ -141,6 +112,23 @@ const Home = () => {
                 </div>
               </button>
             ))}
+            <button
+              disabled={true}
+              className="py-3 px-5 bg-blue-900 border border-transparent hover:border hover:border-blue-900 hover:bg-transparent"
+            >
+              <div className="flex items-center gap-2 min-w-[200px] justify-between">
+                <div className="flex items-center gap-2">
+                  <Image
+                    src={`/wallets/keplr.png`}
+                    width={25}
+                    height={25}
+                    alt="wallet"
+                  />
+                  Keplr
+                </div>
+                <div className="text-sm text-gray-300">(unsupported)</div>
+              </div>
+            </button>
           </div>
         </>
       )}
