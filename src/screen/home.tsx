@@ -61,9 +61,12 @@ const Home = () => {
   }, [address, connect, isConnected, signMessageAsync, requestNo]);
 
   const checkStatus = useCallback(
-    (requestNo: string, address: `0x${string}` | undefined) => {
-      console.log(11222);
-      if (requestNo && address) {
+    (
+      requestNo: string,
+      address: `0x${string}` | undefined,
+      isConnected: boolean
+    ) => {
+      if (requestNo && address && isConnected) {
         setIsChecking(true);
 
         fetch(`/api/checkStatus?requestNo=${requestNo}&address=${address}`)
@@ -87,14 +90,14 @@ const Home = () => {
   }, [router]);
 
   useEffect(() => {
-    checkStatus(requestNo, address);
+    checkStatus(requestNo, address, isConnected);
 
     const timeoutId = setInterval(() => {
-      checkStatus(requestNo, address);
+      checkStatus(requestNo, address, isConnected);
     }, 10 * 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [requestNo, address, checkStatus]);
+  }, [requestNo, address, isConnected, checkStatus]);
 
   useEffect(() => setMounted(true), []);
 
